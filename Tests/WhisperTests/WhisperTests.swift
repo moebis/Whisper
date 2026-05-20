@@ -59,14 +59,14 @@ import CoreGraphics
     #expect(machine.isDictating == true)
 }
 
-@Test func focusGateRejectsUniversalControlProxyFocus() {
+@Test func focusGateAllowsUniversalControlProxyToReachTextFocusValidation() {
     let gate = HotkeyFocusGate()
 
     #expect(gate.shouldAcceptHotkey(
         frontmostBundleIdentifier: "com.apple.universalcontrol",
         mouseLocation: CGPoint(x: 2559, y: 700),
         screenFrames: [CGRect(x: 0, y: 0, width: 2560, height: 1440)]
-    ) == false)
+    ) == true)
 }
 
 @Test func focusGateAcceptsNormalLocalFocusInsideLocalScreen() {

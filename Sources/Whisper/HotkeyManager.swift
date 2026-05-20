@@ -80,7 +80,7 @@ class HotkeyManager: @unchecked Sendable {
             mouseLocation: NSEvent.mouseLocation,
             screenFrames: NSScreen.screens.map(\.frame)
         ) else {
-            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because Universal Control focus is elsewhere")
+            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because the pointer is outside local screens")
             return false
         }
         
