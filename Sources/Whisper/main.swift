@@ -105,10 +105,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             let focusedElement = AccessibilityFocusInspector.focusedElementDescriptor()
-            guard self.textInputGate.shouldAcceptFocusedElement(focusedElement) else {
+            let fallbackTextElements = AccessibilityFocusInspector.focusedWindowTextCandidateDescriptors()
+            guard self.textInputGate.shouldAcceptFocusedElement(
+                focusedElement,
+                fallbackElements: fallbackTextElements
+            ) else {
                 let role = focusedElement?.role ?? "nil"
                 let subrole = focusedElement?.subrole ?? "nil"
-                AppLogger.info("Whisper [AppDelegate]: Recording start rejected because no focused text input is active on this Mac (role=\(role), subrole=\(subrole))")
+                AppLogger.info("Whisper [AppDelegate]: Recording start rejected because no focused text input is active on this Mac (role=\(role), subrole=\(subrole), fallbackTextCandidates=\(fallbackTextElements.count))")
                 return false
             }
             

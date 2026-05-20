@@ -123,6 +123,29 @@ import CoreGraphics
     ) == true)
 }
 
+@Test func focusedTextInputGateAcceptsFallbackEditableElementWhenFocusedElementIsMissing() {
+    let gate = FocusedTextInputGate()
+    let codexEditorGroup = FocusedElementDescriptor(
+        role: "AXGroup",
+        subrole: nil,
+        attributeNames: ["AXValue", "AXSelectedTextRange", "AXNumberOfCharacters"]
+    )
+
+    #expect(gate.shouldAcceptFocusedElement(nil, fallbackElements: [codexEditorGroup]) == true)
+}
+
+@Test func focusedTextInputGateDoesNotUseFallbackWhenNonTextElementHasFocus() {
+    let gate = FocusedTextInputGate()
+    let focusedButton = FocusedElementDescriptor(role: "AXButton", subrole: nil, attributeNames: ["AXValue"])
+    let visibleEditor = FocusedElementDescriptor(
+        role: "AXGroup",
+        subrole: nil,
+        attributeNames: ["AXValue", "AXSelectedTextRange", "AXNumberOfCharacters"]
+    )
+
+    #expect(gate.shouldAcceptFocusedElement(focusedButton, fallbackElements: [visibleEditor]) == false)
+}
+
 @Test func focusedTextInputGateRejectsMissingOrNonTextFocus() {
     let gate = FocusedTextInputGate()
 
