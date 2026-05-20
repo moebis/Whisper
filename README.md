@@ -72,4 +72,5 @@ If you prefer not to run an unsigned downloaded binary, build it locally from so
 
 ## Version
 
-1.0 initial release.
+- 1.1.0 improves Left Control activation across Codex, Universal Control target Macs, and other Accessibility edge cases, with safer dictation replacement boundaries.
+- 1.0.0 initial release.
