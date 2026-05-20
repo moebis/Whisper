@@ -89,6 +89,49 @@ import CoreGraphics
     ) == false)
 }
 
+@Test func focusedTextInputGateAcceptsStandardTextRoles() {
+    let gate = FocusedTextInputGate()
+
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(role: "AXTextField", subrole: nil, attributeNames: [])
+    ) == true)
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(role: "AXTextArea", subrole: nil, attributeNames: [])
+    ) == true)
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(role: "AXComboBox", subrole: nil, attributeNames: [])
+    ) == true)
+}
+
+@Test func focusedTextInputGateAcceptsSearchFieldSubrole() {
+    let gate = FocusedTextInputGate()
+
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(role: "AXTextField", subrole: "AXSearchField", attributeNames: [])
+    ) == true)
+}
+
+@Test func focusedTextInputGateAcceptsEditableWebTextAttributes() {
+    let gate = FocusedTextInputGate()
+
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(
+            role: "AXWebArea",
+            subrole: nil,
+            attributeNames: ["AXValue", "AXSelectedTextRange", "AXNumberOfCharacters"]
+        )
+    ) == true)
+}
+
+@Test func focusedTextInputGateRejectsMissingOrNonTextFocus() {
+    let gate = FocusedTextInputGate()
+
+    #expect(gate.shouldAcceptFocusedElement(nil) == false)
+    #expect(gate.shouldAcceptFocusedElement(
+        FocusedElementDescriptor(role: "AXButton", subrole: nil, attributeNames: ["AXValue"])
+    ) == false)
+}
+
 @Test func replacementPlanDeletesOnlyLiveTypedDeltasWhenFinalTranscriptDiffers() {
     let tracker = DictationTextTracker()
     let session = tracker.beginSession()

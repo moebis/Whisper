@@ -11,6 +11,7 @@ class HotkeyManager: @unchecked Sendable {
     private var localMonitor: Any?
     private var stateMachine = ControlKeyDictationStateMachine()
     private let focusGate = HotkeyFocusGate()
+    private let textInputGate = FocusedTextInputGate()
     private var isLeftControlDown = false
     
     private init() {}
@@ -62,21 +63,37 @@ class HotkeyManager: @unchecked Sendable {
             return
         }
 
-        guard shouldAcceptHotkeyForCurrentFocus() else {
-            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because Universal Control focus is elsewhere")
+        if stateMachine.isDictating {
+            AppLogger.info("Whisper [HotkeyManager]: Left Control press observed")
+            perform(stateMachine.leftControlPressed(at: timestamp))
             return
         }
+
+        guard shouldAcceptStartHotkeyForCurrentFocus() else { return }
 
         AppLogger.info("Whisper [HotkeyManager]: Left Control press observed")
         perform(stateMachine.leftControlPressed(at: timestamp))
     }
 
-    private func shouldAcceptHotkeyForCurrentFocus() -> Bool {
-        focusGate.shouldAcceptHotkey(
+    private func shouldAcceptStartHotkeyForCurrentFocus() -> Bool {
+        guard focusGate.shouldAcceptHotkey(
             frontmostBundleIdentifier: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
             mouseLocation: NSEvent.mouseLocation,
             screenFrames: NSScreen.screens.map(\.frame)
-        )
+        ) else {
+            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because Universal Control focus is elsewhere")
+            return false
+        }
+        
+        let focusedElement = AccessibilityFocusInspector.focusedElementDescriptor()
+        guard textInputGate.shouldAcceptFocusedElement(focusedElement) else {
+            let role = focusedElement?.role ?? "nil"
+            let subrole = focusedElement?.subrole ?? "nil"
+            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because no focused text input is active on this Mac (role=\(role), subrole=\(subrole))")
+            return false
+        }
+        
+        return true
     }
     
     private func perform(_ action: ControlKeyDictationAction) {
