@@ -36,6 +36,39 @@ struct FocusedTextInputGate {
 
 enum AccessibilityFocusInspector {
     static func focusedElementDescriptor() -> FocusedElementDescriptor? {
+        guard let element = focusedElement() else { return nil }
+        
+        return FocusedElementDescriptor(
+            role: stringAttribute(kAXRoleAttribute, from: element),
+            subrole: stringAttribute(kAXSubroleAttribute, from: element),
+            attributeNames: attributeNames(from: element)
+        )
+    }
+    
+    static func selectedTextRangeLocation() -> Int? {
+        guard let element = focusedElement() else { return nil }
+        
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &value
+        )
+        guard result == .success,
+              let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let axValue = value as! AXValue
+        guard AXValueGetType(axValue) == .cfRange else { return nil }
+        
+        var range = CFRange()
+        guard AXValueGetValue(axValue, .cfRange, &range) else { return nil }
+        return range.location
+    }
+    
+    private static func focusedElement() -> AXUIElement? {
         let systemWideElement = AXUIElementCreateSystemWide()
         var focusedElementValue: CFTypeRef?
         let focusedResult = AXUIElementCopyAttributeValue(
@@ -45,16 +78,12 @@ enum AccessibilityFocusInspector {
         )
         
         guard focusedResult == .success,
-              let focusedElement = focusedElementValue else {
+              let focusedElement = focusedElementValue,
+              CFGetTypeID(focusedElement) == AXUIElementGetTypeID() else {
             return nil
         }
         
-        let element = focusedElement as! AXUIElement
-        return FocusedElementDescriptor(
-            role: stringAttribute(kAXRoleAttribute, from: element),
-            subrole: stringAttribute(kAXSubroleAttribute, from: element),
-            attributeNames: attributeNames(from: element)
-        )
+        return (focusedElement as! AXUIElement)
     }
     
     private static func stringAttribute(_ attribute: String, from element: AXUIElement) -> String? {

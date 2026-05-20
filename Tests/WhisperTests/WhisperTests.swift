@@ -136,7 +136,8 @@ import CoreGraphics
     let tracker = DictationTextTracker()
     let session = tracker.beginSession()
 
-    tracker.recordTypedDelta("Hello", sessionID: session)
+    let typedDelta = tracker.prepareDeltaForTyping("Hello", sessionID: session)
+    tracker.recordTypedDelta(typedDelta, sessionID: session)
 
     let plan = tracker.replacementPlan(
         for: session,
@@ -148,15 +149,72 @@ import CoreGraphics
     #expect(plan.replacementText == "Hello.")
 }
 
+@Test func firstTypedDeltaStripsLeadingWhitespaceAtSessionBoundary() {
+    let tracker = DictationTextTracker()
+    let session = tracker.beginSession()
+
+    let firstDelta = tracker.prepareDeltaForTyping("  Hello", sessionID: session)
+    tracker.recordTypedDelta(firstDelta, sessionID: session)
+    let secondDelta = tracker.prepareDeltaForTyping(" world", sessionID: session)
+
+    #expect(firstDelta == "Hello")
+    #expect(secondDelta == " world")
+}
+
+@Test func whitespaceOnlyFirstDeltaIsNotTyped() {
+    let tracker = DictationTextTracker()
+    let session = tracker.beginSession()
+
+    let firstDelta = tracker.prepareDeltaForTyping("   ", sessionID: session)
+    tracker.recordTypedDelta(firstDelta, sessionID: session)
+    let secondDelta = tracker.prepareDeltaForTyping("Hello", sessionID: session)
+
+    #expect(firstDelta == "")
+    #expect(secondDelta == "Hello")
+}
+
+@Test func replacementPlanTrimsBoundaryWhitespaceFromReplacementText() {
+    let tracker = DictationTextTracker()
+    let session = tracker.beginSession()
+
+    tracker.recordTypedDelta(" Hello ", sessionID: session)
+
+    let plan = tracker.replacementPlan(
+        for: session,
+        rawTranscript: " Hello ",
+        polishedText: " Hello "
+    )
+
+    #expect(plan.backspaceCount == 7)
+    #expect(plan.replacementText == "Hello")
+}
+
+@Test func replacementPlanCannotBackspacePastCursorAnchorLimit() {
+    let tracker = DictationTextTracker()
+    let session = tracker.beginSession()
+
+    tracker.recordTypedDelta(" Hello", sessionID: session)
+
+    let plan = tracker.replacementPlan(
+        for: session,
+        rawTranscript: " Hello",
+        polishedText: "Hello",
+        maximumBackspaceCount: 5
+    )
+
+    #expect(plan.backspaceCount == 5)
+    #expect(plan.replacementText == "Hello")
+}
+
 @Test func staleDeltasCannotExpandReplacementRangeForNextSession() {
     let tracker = DictationTextTracker()
     let firstSession = tracker.beginSession()
-    tracker.recordTypedDelta("old text", sessionID: firstSession)
+    tracker.recordTypedDelta(tracker.prepareDeltaForTyping("old text", sessionID: firstSession), sessionID: firstSession)
     tracker.endSession(firstSession)
 
     let secondSession = tracker.beginSession()
-    tracker.recordTypedDelta("late old delta", sessionID: firstSession)
-    tracker.recordTypedDelta("new", sessionID: secondSession)
+    tracker.recordTypedDelta(tracker.prepareDeltaForTyping("late old delta", sessionID: firstSession), sessionID: firstSession)
+    tracker.recordTypedDelta(tracker.prepareDeltaForTyping("new", sessionID: secondSession), sessionID: secondSession)
 
     let plan = tracker.replacementPlan(
         for: secondSession,
@@ -172,7 +230,7 @@ import CoreGraphics
     let tracker = DictationTextTracker()
     let session = tracker.beginSession()
 
-    tracker.recordTypedDelta("hello", sessionID: session)
+    tracker.recordTypedDelta(tracker.prepareDeltaForTyping("hello", sessionID: session), sessionID: session)
 
     let plan = tracker.replacementPlan(
         for: session,

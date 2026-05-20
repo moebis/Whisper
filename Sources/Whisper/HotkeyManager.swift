@@ -11,7 +11,6 @@ class HotkeyManager: @unchecked Sendable {
     private var localMonitor: Any?
     private var stateMachine = ControlKeyDictationStateMachine()
     private let focusGate = HotkeyFocusGate()
-    private let textInputGate = FocusedTextInputGate()
     private var isLeftControlDown = false
     
     private init() {}
@@ -82,14 +81,6 @@ class HotkeyManager: @unchecked Sendable {
             screenFrames: NSScreen.screens.map(\.frame)
         ) else {
             AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because Universal Control focus is elsewhere")
-            return false
-        }
-        
-        let focusedElement = AccessibilityFocusInspector.focusedElementDescriptor()
-        guard textInputGate.shouldAcceptFocusedElement(focusedElement) else {
-            let role = focusedElement?.role ?? "nil"
-            let subrole = focusedElement?.subrole ?? "nil"
-            AppLogger.info("Whisper [HotkeyManager]: Left Control press ignored because no focused text input is active on this Mac (role=\(role), subrole=\(subrole))")
             return false
         }
         

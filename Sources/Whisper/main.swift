@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let audioEngine = AudioEngine()
     let webSocketClient = WebSocketClient()
     private let dictationTextTracker = DictationTextTracker()
+    private let textInputGate = FocusedTextInputGate()
     
     private var polishTimeoutWorkItem: DispatchWorkItem?
     
@@ -42,9 +43,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self,
                   let sessionID = self.dictationTextTracker.currentSessionID() else { return }
             
+            let typedDelta = self.dictationTextTracker.prepareDeltaForTyping(delta, sessionID: sessionID)
+            guard !typedDelta.isEmpty else { return }
+            
             // Type the delta immediately in the background so the user sees it in the active text field
-            KeyboardDriver.type(delta)
-            self.dictationTextTracker.recordTypedDelta(delta, sessionID: sessionID)
+            KeyboardDriver.type(typedDelta)
+            self.dictationTextTracker.recordTypedDelta(typedDelta, sessionID: sessionID)
         }
         
         webSocketClient.onTranscriptUpdate = { transcript in
@@ -100,7 +104,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return false
             }
             
-            let sessionID = self.dictationTextTracker.beginSession()
+            let focusedElement = AccessibilityFocusInspector.focusedElementDescriptor()
+            guard self.textInputGate.shouldAcceptFocusedElement(focusedElement) else {
+                let role = focusedElement?.role ?? "nil"
+                let subrole = focusedElement?.subrole ?? "nil"
+                AppLogger.info("Whisper [AppDelegate]: Recording start rejected because no focused text input is active on this Mac (role=\(role), subrole=\(subrole))")
+                return false
+            }
+            
+            let sessionID = self.dictationTextTracker.beginSession(
+                cursorAnchorLocation: AccessibilityFocusInspector.selectedTextRangeLocation()
+            )
             AppLogger.info("Whisper [AppDelegate]: Dictation text session \(sessionID) started")
             
             // Connect to WebSocket and start audio engine
@@ -195,7 +209,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let replacementPlan = self.dictationTextTracker.replacementPlan(
                     for: sessionID,
                     rawTranscript: rawTranscript,
-                    polishedText: polishedText
+                    polishedText: polishedText,
+                    maximumBackspaceCount: self.dictationTextTracker.maximumBackspaceCount(
+                        for: sessionID,
+                        currentCursorLocation: AccessibilityFocusInspector.selectedTextRangeLocation()
+                    )
                 )
                 AppLogger.info("Whisper [AppDelegate]: Polish replacement plan deletes \(replacementPlan.backspaceCount) typed characters")
                 
